@@ -2,69 +2,50 @@ import SwiftUI
 
 struct BillSplittingView: View {
     @Environment(PayliftDemoStore.self) private var store
-    @State private var tipCents = 0
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    BillSummaryCard(tipCents: $tipCents)
-                    PaymentActionsCard(tipCents: tipCents)
+                    BillSummaryCard()
+                    POSNoticeCard()
                     SharedItemsCard()
                     BillItemsSelectionCard()
                 }
                 .padding()
             }
             .background(Color.gray.opacity(0.08))
-            .navigationTitle("Hesap paylaşımı")
-            .alert("Ödeme", isPresented: Binding(get: { store.paymentMessage != nil }, set: { if !$0 { store.paymentMessage = nil } })) {
-                Button("Tamam", role: .cancel) { store.paymentMessage = nil }
-            } message: {
-                Text(store.paymentMessage ?? "")
-            }
+            .navigationTitle("Bill splitting")
         }
     }
 }
 
 private struct BillSummaryCard: View {
     @Environment(PayliftDemoStore.self) private var store
-    @Binding var tipCents: Int
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 VStack(alignment: .leading) {
-                    Text("Masa \(store.table.number)")
+                    Text("Table \(store.table.number)")
                         .font(.title.bold())
-                    Text("\(store.activeParticipant.displayName) için ödeme")
+                    Text("Split for \(store.activeParticipant.displayName)")
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
                 VStack(alignment: .trailing) {
                     Text(store.remainingTotal.formatted)
                         .font(.title2.bold())
-                    Text("Ödenmemiş")
+                    Text("Unpaid")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
 
             HStack(spacing: 12) {
-                MetricPill(title: "Toplam", value: store.billTotal.formatted, symbol: "sum")
-                MetricPill(title: "Ödenen", value: store.paidTotal.formatted, symbol: "checkmark.seal")
-                MetricPill(title: "Seçili", value: selectedTotal.formatted, symbol: "checklist")
-            }
-
-            VStack(alignment: .leading) {
-                Text("Bahşiş")
-                    .font(.headline)
-                Picker("Bahşiş", selection: $tipCents) {
-                    Text("Yok").tag(0)
-                    Text("₺50").tag(5000)
-                    Text("₺100").tag(10000)
-                    Text("%10").tag(max(0, store.remainingTotal.cents / 10))
-                }
-                .pickerStyle(.segmented)
+                MetricPill(title: "Total", value: store.billTotal.formatted, symbol: "sum")
+                MetricPill(title: "Remaining", value: store.remainingTotal.formatted, symbol: "clock")
+                MetricPill(title: "Selected", value: selectedTotal.formatted, symbol: "checklist")
             }
         }
         .padding()
@@ -78,55 +59,17 @@ private struct BillSummaryCard: View {
     }
 }
 
-private struct PaymentActionsCard: View {
-    @Environment(PayliftDemoStore.self) private var store
-    let tipCents: Int
-
+private struct POSNoticeCard: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Ödeme seçenekleri")
-                .font(.title2.bold())
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
-                PaymentButton(title: "Kendi siparişlerimi öde", symbol: "person.fill.checkmark", mode: .ownItems, tip: Money(cents: tipCents))
-                PaymentButton(title: "Ürün seçerek öde", symbol: "checklist.checked", mode: .selectedItems, tip: Money(cents: tipCents))
-                PaymentButton(title: "Tüm hesabı öde", symbol: "creditcard.fill", mode: .fullBill, tip: Money(cents: tipCents))
-                Button {
-                    store.selectedBillItemIDs = Set(store.unpaidBillItems.map(\.id))
-                } label: {
-                    Label("Kalan ürünleri seç", systemImage: "square.stack.3d.up.fill")
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-            }
-
-            if store.isProcessingPayment {
-                ProgressView("Ödeme sağlayıcısı yanıtı bekleniyor")
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Pay at the counter", systemImage: "creditcard.and.123")
+                .font(.headline)
+            Text("Paylift tracks who ordered what and how the bill is split. Actual payment happens through the restaurant POS — not in this app.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
         .padding()
-        .background(Color.gray.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
-    }
-}
-
-private struct PaymentButton: View {
-    @Environment(PayliftDemoStore.self) private var store
-    let title: String
-    let symbol: String
-    let mode: PaymentMode
-    let tip: Money
-
-    var body: some View {
-        Button {
-            Task { await store.pay(mode: mode, tip: tip) }
-        } label: {
-            Label(title, systemImage: symbol)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .disabled(store.isProcessingPayment)
+        .background(Color.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
     }
 }
 
@@ -135,7 +78,7 @@ private struct SharedItemsCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Ortak ürünler")
+            Text("Shared items")
                 .font(.title2.bold())
             ForEach(store.unpaidBillItems) { item in
                 if item.ownerShares.count > 1 || item.name.localizedCaseInsensitiveContains("meze") || item.name.localizedCaseInsensitiveContains("san") {
@@ -148,7 +91,7 @@ private struct SharedItemsCard: View {
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Button("Eşit böl") {
+                        Button("Split equally") {
                             store.splitItemEqually(item, between: store.participants.filter { $0.role == .customer }.map(\.id))
                         }
                         .buttonStyle(.bordered)
@@ -162,7 +105,7 @@ private struct SharedItemsCard: View {
     }
 
     private func participantName(_ id: PayliftID) -> String {
-        store.participants.first(where: { $0.id == id })?.displayName ?? "Misafir"
+        store.participants.first(where: { $0.id == id })?.displayName ?? "Guest"
     }
 }
 
@@ -171,7 +114,7 @@ private struct BillItemsSelectionCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Ödenmemiş kalemler")
+            Text("Unpaid items")
                 .font(.title2.bold())
             ForEach(store.unpaidBillItems) { item in
                 Button {
@@ -191,9 +134,9 @@ private struct BillItemsSelectionCard: View {
                         VStack(alignment: .trailing) {
                             Text(item.remaining.formatted)
                                 .font(.headline)
-                            Text(item.paymentStatus.rawValue)
+                            Text(item.billStatus.rawValue)
                                 .font(.caption)
-                                .foregroundStyle(item.paymentStatus == .locked ? .orange : .secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -206,7 +149,7 @@ private struct BillItemsSelectionCard: View {
 
     private func ownerDescription(for item: OrderItem) -> String {
         item.ownerShares.map { share in
-            let name = store.participants.first(where: { $0.id == share.participantID })?.displayName ?? "Misafir"
+            let name = store.participants.first(where: { $0.id == share.participantID })?.displayName ?? "Guest"
             return "\(name) \(share.amount.formatted)"
         }.joined(separator: " • ")
     }

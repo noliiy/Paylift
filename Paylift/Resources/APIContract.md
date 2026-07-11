@@ -2,25 +2,38 @@
 
 Base URL: `/api/v1`
 
-All write endpoints require HTTPS, bearer access token, tenant isolation by `businessId`, role checks, audit logging, and an `Idempotency-Key` header where noted.
+All write endpoints require HTTPS, bearer access token, tenant isolation by `businessId`, role checks, and audit logging.
 
 ## Authentication
 
-- `POST /auth/sign-in-with-apple`
+- `POST /auth/sign-in-with-apple` — Sign in or register via Apple ID
+- `POST /auth/sign-in-with-google` — Sign in or register via Google
 - `POST /auth/refresh`
 - `POST /auth/logout`
+- `GET /auth/me`
+
+Request body (Apple / Google):
+
+```json
+{
+  "displayName": "Emre",
+  "email": "emre@example.com",
+  "identityToken": "oauth-identity-token"
+}
+```
+
+> **Note:** The mobile app does not process payments. Payment endpoints exist for POS middleware integration only.
 
 ## Businesses and Branches
 
 - `GET /businesses/{businessId}`
 - `GET /businesses/{businessId}/branches`
 - `GET /branches/{branchId}`
+- `GET /branches/{branchId}/dashboard`
 
 ## QR and Table Sessions
 
 - `POST /qr/resolve`
-  - Body: `businessId`, `branchId`, `tableId`, `token`, optional location/network proof.
-  - Returns active `tableSession` or instructions to create one.
 - `POST /table-sessions`
 - `POST /table-sessions/{sessionId}/join`
 - `GET /table-sessions/{sessionId}`
@@ -43,21 +56,19 @@ All write endpoints require HTTPS, bearer access token, tenant isolation by `bus
 ## Bill Splitting
 
 - `GET /table-sessions/{sessionId}/bill`
-- `POST /table-sessions/{sessionId}/bill/split`
 - `POST /table-sessions/{sessionId}/bill/assign-items`
+- `POST /table-sessions/{sessionId}/bill/split-item`
 - `POST /table-sessions/{sessionId}/bill/calculate`
 
-## Payments
+Bill splitting tracks who owes what. Actual payment is completed at the restaurant POS.
+
+## Payments (POS middleware only — not used by mobile app)
 
 - `POST /payments/intents`
-  - Requires `Idempotency-Key`.
-  - Locks selected `order_item_owner_shares` or whole `order_items` until success, failure, cancel, or timeout.
 - `POST /payments/{paymentId}/confirm`
 - `POST /payments/{paymentId}/cancel`
 - `POST /payments/{paymentId}/refund`
 - `GET /payments/{paymentId}`
-
-Payment provider integrations must tokenize card data outside Paylift systems. Paylift stores provider references, allocation records, status, tips, refunds, and audit events only.
 
 ## Reports
 
@@ -67,4 +78,4 @@ Payment provider integrations must tokenize card data outside Paylift systems. P
 - `GET /reports/tables`
 - `GET /reports/employees`
 
-Use `Gün Sonu Satış Özeti` wording unless a country-specific fiscal device integration certifies an official Z report.
+Use **End of Day Sales Summary** for report titles.

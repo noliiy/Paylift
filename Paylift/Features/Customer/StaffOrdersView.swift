@@ -6,27 +6,27 @@ struct StaffOrdersView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Masa durumu") {
+                Section("Table status") {
                     HStack {
-                        Label("Masa \(store.table.number)", systemImage: "table.furniture")
+                        Label("Table \(store.table.number)", systemImage: "table.furniture")
                         Spacer()
                         Text(store.remainingTotal.formatted)
                             .font(.headline)
                     }
                     HStack {
-                        Label("Ödenen", systemImage: "checkmark.seal")
+                        Label("Unpaid balance", systemImage: "clock")
                         Spacer()
-                        Text(store.paidTotal.formatted)
+                        Text(store.remainingTotal.formatted)
                     }
                 }
 
-                Section("Aktif siparişler") {
+                Section("Active orders") {
                     ForEach(store.orders) { order in
                         StaffOrderRow(order: order)
                     }
                 }
             }
-            .navigationTitle("Sipariş yönetimi")
+            .navigationTitle("Order management")
         }
     }
 }
@@ -70,7 +70,7 @@ private struct StaffOrderRow: View {
                         store.advanceOrderStatus(order)
                     }
                 } label: {
-                    Label("Durumu ilerlet", systemImage: "arrow.forward.circle")
+                    Label("Advance status", systemImage: "arrow.forward.circle")
                 }
                 .buttonStyle(.bordered)
                 .disabled(order.status == .served || order.status == .cancelled || order.status == .refunded)
@@ -91,6 +91,6 @@ private struct StaffOrderRow: View {
     }
 
     private func participantName(_ id: PayliftID) -> String {
-        store.participants.first(where: { $0.id == id })?.displayName ?? "Misafir"
+        store.participants.first(where: { $0.id == id })?.displayName ?? "Guest"
     }
 }

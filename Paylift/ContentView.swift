@@ -28,19 +28,19 @@ private struct PayliftRootView: View {
             } else {
                 TabView {
                     CustomerHomeView()
-                        .tabItem { Label("Müşteri", systemImage: "qrcode.viewfinder") }
+                        .tabItem { Label("Customer", systemImage: "qrcode.viewfinder") }
                     StaffOrdersView()
-                        .tabItem { Label("Sipariş", systemImage: "bell.badge") }
+                        .tabItem { Label("Orders", systemImage: "bell.badge") }
                     BillSplittingView()
-                        .tabItem { Label("Hesap", systemImage: "creditcard") }
+                        .tabItem { Label("Bill", systemImage: "person.2.fill") }
                     DashboardView()
-                        .tabItem { Label("Panel", systemImage: "chart.bar.xaxis") }
+                        .tabItem { Label("Dashboard", systemImage: "chart.bar.xaxis") }
                 }
             }
         }
         .overlay(alignment: .top) {
             if store.offlineMode {
-                Text("Offline mod: ödeme tamamlanmış sayılmaz, işlemler senkronizasyon bekler.")
+                Text("Offline mode: changes sync when connection is restored.")
                     .font(.footnote.weight(.semibold))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
@@ -76,10 +76,10 @@ private enum SidebarItem: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .customer: "Müşteri akışı"
-        case .orders: "Sipariş yönetimi"
-        case .bill: "Hesap paylaşımı"
-        case .dashboard: "İşletme paneli"
+        case .customer: "Customer flow"
+        case .orders: "Order management"
+        case .bill: "Bill splitting"
+        case .dashboard: "Business dashboard"
         }
     }
 

@@ -11,7 +11,7 @@ struct CustomerHomeView: View {
                     TableSessionHeader()
 
                     if !store.isJoinedToTable {
-                        QRJoinCard()
+                        SignInAndJoinCard()
                     }
 
                     MenuBrowserView()
@@ -28,8 +28,13 @@ struct CustomerHomeView: View {
                         Image(systemName: store.offlineMode ? "wifi.slash" : "wifi")
                     }
                     .labelsHidden()
-                    .accessibilityLabel("Offline modu")
+                    .accessibilityLabel("Offline mode")
                 }
+            }
+            .alert("Account", isPresented: Binding(get: { store.authMessage != nil }, set: { if !$0 { store.authMessage = nil } })) {
+                Button("OK", role: .cancel) { store.authMessage = nil }
+            } message: {
+                Text(store.authMessage ?? "")
             }
         }
     }
@@ -42,22 +47,22 @@ private struct TableSessionHeader: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Masa \(store.table.number)")
+                    Text("Table \(store.table.number)")
                         .font(.largeTitle.bold())
-                    Text("\(store.branch.name) • \(store.participants.filter { $0.role == .customer }.count) kişi")
+                    Text("\(store.branch.name) • \(store.participants.filter { $0.role == .customer }.count) guests")
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(store.remainingTotal.formatted)
                         .font(.title2.bold())
-                    Text("Kalan hesap")
+                    Text("Remaining")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
 
-            Picker("Aktif müşteri", selection: Bindable(store).activeParticipantID) {
+            Picker("Active guest", selection: Bindable(store).activeParticipantID) {
                 ForEach(store.participants.filter { $0.role == .customer }) { participant in
                     Text(participant.displayName).tag(participant.id)
                 }
@@ -69,26 +74,50 @@ private struct TableSessionHeader: View {
     }
 }
 
-private struct QRJoinCard: View {
+private struct SignInAndJoinCard: View {
     @Environment(PayliftDemoStore.self) private var store
     @State private var displayName = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("QR ile masaya katıl", systemImage: "qrcode.viewfinder")
+            Label("Join table", systemImage: "qrcode.viewfinder")
                 .font(.headline)
-            Text("Demo akışında QR token doğrulandı: işletme, şube, masa ve kısa süreli oturum eşleşti.")
+            Text("Sign in with Apple or Google, then join the table session. Payments are handled at the POS — not in this app.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+
+            TextField("Display name", text: $displayName)
+                .textFieldStyle(.roundedBorder)
+
             HStack(spacing: 12) {
-                TextField("Görünen ad", text: $displayName)
-                    .textFieldStyle(.roundedBorder)
                 Button {
-                    store.joinTable(displayName: displayName)
+                    Task { await store.signInWithApple(displayName: displayName.isEmpty ? "Guest" : displayName) }
                 } label: {
-                    Label("Katıl", systemImage: "checkmark.circle.fill")
+                    Label("Apple", systemImage: "apple.logo")
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
+                .disabled(store.isAuthenticating)
+
+                Button {
+                    Task { await store.signInWithGoogle(displayName: displayName.isEmpty ? "Guest" : displayName) }
+                } label: {
+                    Label("Google", systemImage: "g.circle.fill")
+                }
+                .buttonStyle(.bordered)
+                .disabled(store.isAuthenticating)
+            }
+
+            Button {
+                store.joinTable(displayName: displayName.isEmpty ? "Guest" : displayName)
+            } label: {
+                Label("Join table", systemImage: "checkmark.circle.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+            if store.isAuthenticating {
+                ProgressView("Signing in…")
             }
         }
         .padding()
@@ -102,7 +131,7 @@ private struct MenuBrowserView: View {
     var body: some View {
         @Bindable var store = store
         VStack(alignment: .leading, spacing: 12) {
-            Text("Menü")
+            Text("Menu")
                 .font(.title2.bold())
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -168,14 +197,14 @@ private struct MenuItemCard: View {
             }
 
             HStack {
-                Label("\(item.preparationMinutes) dk", systemImage: "clock")
+                Label("\(item.preparationMinutes) min", systemImage: "clock")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button {
                     store.addToCart(item)
                 } label: {
-                    Label("Sepete ekle", systemImage: "plus.circle.fill")
+                    Label("Add to cart", systemImage: "plus.circle.fill")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!item.isAvailable)
@@ -192,7 +221,7 @@ private struct CartSummaryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Sepet")
+                Text("Cart")
                     .font(.title2.bold())
                 Spacer()
                 Text(store.cartTotal.formatted)
@@ -200,7 +229,7 @@ private struct CartSummaryView: View {
             }
 
             if store.cart.isEmpty {
-                ContentUnavailableView("Sepet boş", systemImage: "cart", description: Text("Demo menüden ürün ekleyerek sipariş oluşturabilirsiniz."))
+                ContentUnavailableView("Cart is empty", systemImage: "cart", description: Text("Add items from the menu to place an order."))
                     .frame(minHeight: 120)
             } else {
                 ForEach(store.cart) { item in
@@ -208,7 +237,7 @@ private struct CartSummaryView: View {
                         VStack(alignment: .leading) {
                             Text(item.menuItem.name)
                                 .font(.headline)
-                            Text("\(item.quantity) adet • \(store.activeParticipant.displayName)")
+                            Text("\(item.quantity)x • \(store.activeParticipant.displayName)")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -229,7 +258,7 @@ private struct CartSummaryView: View {
                         store.submitCart()
                     }
                 } label: {
-                    Label("Siparişi gönder", systemImage: "paperplane.fill")
+                    Label("Submit order", systemImage: "paperplane.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -245,7 +274,7 @@ private struct CustomerOrdersView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Sipariş durumum")
+            Text("My orders")
                 .font(.title2.bold())
             ForEach(store.orders.filter { $0.participantID == store.activeParticipantID }) { order in
                 HStack {

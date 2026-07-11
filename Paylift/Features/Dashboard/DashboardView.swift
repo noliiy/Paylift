@@ -15,7 +15,7 @@ struct DashboardView: View {
                 .padding()
             }
             .background(Color.gray.opacity(0.08))
-            .navigationTitle("İşletme paneli")
+            .navigationTitle("Business dashboard")
         }
     }
 }
@@ -32,7 +32,7 @@ private struct DashboardHeader: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Label("Canlı", systemImage: "dot.radiowaves.left.and.right")
+            Label("Live", systemImage: "dot.radiowaves.left.and.right")
                 .font(.headline)
                 .foregroundStyle(.green)
         }
@@ -46,11 +46,11 @@ private struct SalesMetricsGrid: View {
 
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 190), spacing: 12)], spacing: 12) {
-            DashboardMetric(title: "Günlük ciro", value: store.dailySummary.revenue.formatted, symbol: "chart.line.uptrend.xyaxis", color: .green)
-            DashboardMetric(title: "Bahşiş", value: store.dailySummary.tips.formatted, symbol: "heart.fill", color: .pink)
-            DashboardMetric(title: "Aktif masa", value: "\(store.dailySummary.openTables)", symbol: "table.furniture", color: .blue)
-            DashboardMetric(title: "Bekleyen sipariş", value: "\(store.dailySummary.pendingOrders)", symbol: "bell.badge.fill", color: .orange)
-            DashboardMetric(title: "Ortalama hesap", value: store.dailySummary.averageTicket.formatted, symbol: "person.2.fill", color: .purple)
+            DashboardMetric(title: "Daily revenue", value: store.dailySummary.revenue.formatted, symbol: "chart.line.uptrend.xyaxis", color: .green)
+            DashboardMetric(title: "Tips", value: store.dailySummary.tips.formatted, symbol: "heart.fill", color: .pink)
+            DashboardMetric(title: "Active tables", value: "\(store.dailySummary.openTables)", symbol: "table.furniture", color: .blue)
+            DashboardMetric(title: "Pending orders", value: "\(store.dailySummary.pendingOrders)", symbol: "bell.badge.fill", color: .orange)
+            DashboardMetric(title: "Average ticket", value: store.dailySummary.averageTicket.formatted, symbol: "person.2.fill", color: .purple)
         }
     }
 }
@@ -60,24 +60,24 @@ private struct TablesOverviewGrid: View {
 
     private var tableCards: [(String, String, Money, Money, Color)] {
         [
-            (store.table.number, "Sipariş hazırlanıyor", store.billTotal, store.remainingTotal, .blue),
-            ("5", "Hesap bekliyor", Money(lira: 1480), Money(lira: 620), .orange),
-            ("8", "Servis edildi", Money(lira: 910), Money(lira: 910), .green),
-            ("14", "Boş", .zero, .zero, .secondary),
-            ("21", "Geciken sipariş", Money(lira: 2240), Money(lira: 2240), .red),
-            ("3", "Ödendi", Money(lira: 760), .zero, .mint)
+            (store.table.number, "Preparing order", store.billTotal, store.remainingTotal, .blue),
+            ("5", "Bill pending", Money(amount: 1480), Money(amount: 620), .orange),
+            ("8", "Served", Money(amount: 910), Money(amount: 910), .green),
+            ("14", "Empty", .zero, .zero, .secondary),
+            ("21", "Delayed order", Money(amount: 2240), Money(amount: 2240), .red),
+            ("3", "Paid at POS", Money(amount: 760), .zero, .mint)
         ]
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Masalar")
+            Text("Tables")
                 .font(.title2.bold())
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
                 ForEach(tableCards, id: \.0) { card in
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Text("Masa \(card.0)")
+                            Text("Table \(card.0)")
                                 .font(.title3.bold())
                             Spacer()
                             Circle()
@@ -89,7 +89,7 @@ private struct TablesOverviewGrid: View {
                             .foregroundStyle(.secondary)
                         HStack {
                             VStack(alignment: .leading) {
-                                Text("Toplam")
+                                Text("Total")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                 Text(card.2.formatted)
@@ -97,7 +97,7 @@ private struct TablesOverviewGrid: View {
                             }
                             Spacer()
                             VStack(alignment: .trailing) {
-                                Text("Kalan")
+                                Text("Remaining")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                 Text(card.3.formatted)
@@ -119,7 +119,7 @@ private struct ProductPerformanceCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Ürün performansı")
+                Text("Product performance")
                     .font(.title2.bold())
                 Spacer()
                 Button { } label: {

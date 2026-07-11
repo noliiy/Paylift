@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: paylift-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: paylift
+      POSTGRES_PASSWORD: paylift
+      POSTGRES_DB: paylift
+    ports:
+      - "5432:5432"
+    volumes:
+      - paylift_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paylift -d paylift"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: paylift-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - paylift_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: paylift-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://paylift:paylift@postgres:5432/paylift?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: dev-access-secret-change-in-production-32chars
+      JWT_REFRESH_SECRET: dev-refresh-secret-change-in-production-32chars
+      ACCESS_TOKEN_TTL: 15m
+      REFRESH_TOKEN_TTL: 7d
+      PORT: 3000
+      CORS_ORIGIN: "*"
+      PAYMENT_LOCK_TTL_SECONDS: 300
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed && node dist/main.js"
+
+volumes:
+  paylift_pg_data:
+  paylift_redis_data:
